@@ -1,0 +1,190 @@
+---
+title: "hm02-gapminder exploration"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+In this Rmd file, I will be exploring the `gapminder` dataset using `ggplot2`. To get started, I will be loading the `tidyverse` package and the `gapminder` dataset.
+
+
+```{r preliminaries}
+library(tidyverse)
+library(gapminder)
+```
+
+
+## Smell test the data
+
+### The `gapminder` dataset
+
+The `gapminder` dataset contains data on life expectancy, GDP per capita and population by country. We can see the head of the dataset:
+
+```{r head}
+head(gapminder)
+```
+
+We can check that `gapminder` is dataframe:
+
+```{r inherits}
+inherits(gapminder,'data.frame')
+```
+
+As we can see below, `gapminder` is a dataframe which has has 1704 rows and 6 columns. 
+
+```{r basic dataframe info}
+typeof(gapminder)
+nrow(gapminder)
+ncol(gapminder)
+```
+
+We can also use the `dim` function to get the dimensions of the dataframe:
+
+```{r dimensions}
+dim(gapminder)
+```
+
+From the below, we can see that two of the columns are categorical variables and the remaining four are continuous random variables.
+
+```{r summary}
+summary(gapminder)
+```
+
+We can use the `sapply` function to check the type and class of each of the columns of the `gapminder` dataframe:
+
+```{r column types}
+sapply(gapminder,typeof)
+sapply(gapminder,class)
+```
+
+In particular, notice that the summary shows that `year` is being treated as a continuous variable. We can make `R` to treat it as a categorical variable thus:
+```{r as.factor}
+gapminder$year = as.factor(gapminder$year)
+class(gapminder$year)
+summary(gapminder$year)
+```
+
+## Explore individual variables
+
+### Categorical variable
+
+We can have a look at the countries categorical variable. We can select the countries column from `gapminder` using `select`:
+
+```{r country}
+select(gapminder,country)
+```
+
+This has a lot of replicates due to multiple years' worth of data. We can remove the duplicates using the `unique` function in `R`:
+
+```{r unique countries}
+unique(select(gapminder,country))
+```
+
+Then we can find the total number of countries in the data set using the `count` function:
+
+```{r countries count}
+gapminder %>% 
+  select(country) %>% 
+  unique() %>% 
+  count()
+```
+
+We can find the number of times each country has appeared on this dataset as follows (only first 6 shown):
+
+```{r countries reps}
+country_count = table(gapminder$country)
+head(country_count)
+```
+
+We can also look at how many countries (in this dataset) are in each continent:
+
+```{r countries bar plot}
+gapminder %>% 
+  select(country,continent) %>% 
+  unique() %>% 
+  ggplot(aes(x=continent)) +
+  geom_bar(aes(fill=continent)) +
+  ggtitle('Countries Per Continent')
+```
+
+### Quantitative variable
+
+Let's take a look at the GDP per capita data. Here's a quick summary of the data:
+
+```{r gdp summary table}
+gapminder %>% 
+  select(gdpPercap) %>% 
+  summary()
+```
+
+We can see this on a basic box plot. From the summary, we can see the average and median are very log compared to the maximum, so we will use a log scale in the box plot:
+
+```{r gdp boxplot}
+ggplot(gapminder,aes(y=gdpPercap)) + 
+  scale_y_log10() +
+  geom_boxplot()
+```
+
+We can also look at the GDP based on continent:
+
+```{r gdp boxplot continent}
+ggplot(gapminder,aes(x=continent,y=gdpPercap)) + 
+  scale_y_log10() +
+  geom_boxplot()
+```
+
+We can also see the spread of the data from a histogram. Similar to before, we used a log scale, but this time for the x axis.
+
+```{r gdp histogram}
+ggplot(gapminder,aes(gdpPercap)) +
+  geom_histogram(bins=50) +
+  scale_x_log10()
+```
+
+We can combine the histogram and a density plot:
+
+```{r gdp histogram density}
+ggplot(gapminder,aes(gdpPercap)) +
+  scale_x_log10() +
+  geom_histogram(aes(y=..density..),alpha=0.5) +
+  geom_density()
+```
+
+## Explore various plot types
+
+Let's compare GDP per capita against population on a scatter plot:
+
+```{r pop vs gdp}
+ggplot(gapminder,aes(pop,gdpPercap)) +
+  scale_x_log10() +
+  scale_y_log10() +
+  geom_point(alpha=0.3)
+```
+
+We can see the same plot but with different continents reflected as different colours:
+
+```{r pop vs gdp colour}
+ggplot(gapminder,aes(pop,gdpPercap)) +
+  scale_x_log10() +
+  scale_y_log10() +
+  geom_point(aes(colour=continent),alpha=0.4)
+```
+
+We can also use colours to reflect which points has a high life expectancy:
+
+```{r pop vs gdp with life exp}
+ggplot(gapminder,aes(pop,gdpPercap)) +
+  scale_x_log10() +
+  scale_y_log10() +
+  geom_point(aes(colour=lifeExp>65),alpha=0.4)
+```
+
+Lastly, we can track how a certain country's GDP and population changed on the above plot. For this illustation, I decided to choose Japan I used the `last_plot()` command to pull up the previous plot.
+
+```{r pop vs gdp with path}
+last_plot() + 
+  geom_path(data=filter(gapminder,country=='Japan'),arrow=arrow())
+```
+
